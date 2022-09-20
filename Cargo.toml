@@ -9,7 +9,7 @@ edition = "2021"
 anyhow = "1.0.65"
 clap = { version = "3.2.22", features = ["derive"] }
 hdf5 = { version = "0.8.1", features = ["blosc"] }
-ndarray = "0.15.6"
+ndarray = { version = "0.15.6" }
 
 [lib]
 name = "cfilt"

@@ -2,7 +2,7 @@ use anyhow::Result;
 use cfilt::{deposit_particles, Currents, Particles};
 use clap::Parser;
 use hdf5::File;
-use ndarray::{s, Array1, Ix3};
+use ndarray::{s, Array1, Array2, Ix3};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -25,12 +25,12 @@ struct Args {
     /// Number of ghost zones
     #[clap(long, default_value = "3")]
     mghost: i32,
-    /// Charge value
-    #[clap(long, default_value = "1.0")]
-    q: f32,
     /// Particle velocity
     #[clap(long, default_value = "0.5")]
     c: f32,
+    /// Compress output file
+    #[clap(default_value = "false")]
+    compress: bool,
 }
 
 fn main() -> Result<()> {
@@ -46,11 +46,11 @@ fn main() -> Result<()> {
     let field_file = File::open(args.field_file)?;
 
     let _jx = field_file.dataset("jx")?.read::<f32, Ix3>()?;
-    let jx = _jx.slice(s![0, .., ..]).to_owned();
-    let _jy = field_file.dataset("jy")?.read::<f32, Ix3>()?;
-    let jy = _jy.slice(s![0, .., ..]).to_owned();
-    let _jz = field_file.dataset("jz")?.read::<f32, Ix3>()?;
-    let jz = _jz.slice(s![0, .., ..]).to_owned();
+    let j_shape = _jx.slice(s![0, .., ..]).raw_dim();
+
+    let jx = Array2::zeros(j_shape);
+    let jy = Array2::zeros(j_shape);
+    let jz = Array2::zeros(j_shape);
 
     let particle_file = File::open(args.particle_file)?;
 
@@ -87,31 +87,31 @@ fn main() -> Result<()> {
     };
 
     let mut p = vec![electrons, ions];
-    let mut c = Currents {
-        jx: jx.to_owned(),
-        jy: jy.to_owned(),
-        jz: jz.to_owned(),
-    };
+    let mut c = Currents { jx, jy, jz };
 
-    deposit_particles(&mut p, &mut c, mx, my, args.mghost, args.q, args.c);
+    deposit_particles(&mut p, &mut c, mx, my, args.mghost, args.c);
 
     param_file.close()?;
     field_file.close()?;
     particle_file.close()?;
 
     let output_file = File::create(args.output_file)?;
-    output_file
-        .new_dataset_builder()
-        .with_data(&c.jx)
-        .create("jx")?;
-    output_file
-        .new_dataset_builder()
-        .with_data(&c.jy)
-        .create("jy")?;
-    output_file
-        .new_dataset_builder()
-        .with_data(&c.jz)
-        .create("jz")?;
+
+    macro_rules! write_dataset {
+        ($name:ident, $compress:expr) => {
+            let builder = output_file.new_dataset_builder().with_data(&c.$name);
+            if $compress {
+                builder.blosc_zstd(9, true).create(stringify!($name))?;
+            } else {
+                builder.create(stringify!($name))?;
+            }
+        };
+    }
+
+    write_dataset!(jx, args.compress);
+    write_dataset!(jy, args.compress);
+    write_dataset!(jz, args.compress);
+
     output_file.close()?;
 
     Ok(())

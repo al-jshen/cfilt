@@ -24,7 +24,6 @@ pub fn deposit_particles(
     mx: i32,
     my: i32,
     mghost: i32,
-    q: f32,
     c: f32,
 ) {
     let maxx: f32 = (mx - mghost) as f32 + 1.;
@@ -38,7 +37,9 @@ pub fn deposit_particles(
     let midz: f32 = 0.5 * (maxz - minz) as f32;
 
     for sp in 0..2 {
-        for n in (0..p.len()) {
+        let q = if sp == 0 { 1. } else { -1. };
+
+        for n in 0..p[sp].x.len() {
             let invgam =
                 1. / (1. + p[sp].u[n].powi(2) + p[sp].v[n].powi(2) + p[sp].w[n].powi(2)).sqrt();
             let x0 = p[sp].x[n] - p[sp].u[n] * invgam * c;
@@ -101,22 +102,22 @@ pub fn deposit_particles(
             let j1p1 = j1 as usize + 1;
             let j2p1 = j2 as usize + 1;
 
-            cur.jx[[i1, j1]] = cur.jx[[i1, j1]] + Fx1 * onemWy1 * onemWz1;
-            cur.jx[[i1, j1p1]] = cur.jx[[i1, j1p1]] + Fx1 * Wy1 * onemWz1;
-            cur.jx[[i2, j2]] = cur.jx[[i2, j2]] + Fx2 * onemWy2 * onemWz2;
-            cur.jx[[i2, j2p1]] = cur.jx[[i2, j2p1]] + Fx2 * Wy2 * onemWz2;
-            cur.jy[[i1, j1]] = cur.jy[[i1, j1]] + Fy1 * onemWx1 * onemWz1;
-            cur.jy[[i1p1, j1]] = cur.jy[[i1p1, j1]] + Fy1 * Wx1 * onemWz1;
-            cur.jy[[i2, j2]] = cur.jy[[i2, j2]] + Fy2 * onemWx2 * onemWz2;
-            cur.jy[[i2p1, j2]] = cur.jy[[i2p1, j2]] + Fy2 * Wx2 * onemWz2;
-            cur.jz[[i1, j1]] = cur.jz[[i1, j1]] + Fz1 * onemWx1 * onemWy1;
-            cur.jz[[i1p1, j1]] = cur.jz[[i1p1, j1]] + Fz1 * Wx1 * onemWy1;
-            cur.jz[[i1, j1p1]] = cur.jz[[i1, j1p1]] + Fz1 * onemWx1 * Wy1;
-            cur.jz[[i1p1, j1p1]] = cur.jz[[i1p1, j1p1]] + Fz1 * Wx1 * Wy1;
-            cur.jz[[i2, j2]] = cur.jz[[i2, j2]] + Fz2 * onemWx2 * onemWy2;
-            cur.jz[[i2p1, j2]] = cur.jz[[i2p1, j2]] + Fz2 * Wx2 * onemWy2;
-            cur.jz[[i2, j2p1]] = cur.jz[[i2, j2p1]] + Fz2 * onemWx2 * Wy2;
-            cur.jz[[i2p1, j2p1]] = cur.jz[[i2p1, j2p1]] + Fz2 * Wx2 * Wy2;
+            cur.jx[[j1, i1]] += Fx1 * onemWy1 * onemWz1;
+            cur.jx[[j1p1, i1]] += Fx1 * Wy1 * onemWz1;
+            cur.jx[[j2, i2]] += Fx2 * onemWy2 * onemWz2;
+            cur.jx[[j2p1, i2]] += Fx2 * Wy2 * onemWz2;
+            cur.jy[[j1, i1]] += Fy1 * onemWx1 * onemWz1;
+            cur.jy[[j1, i1p1]] += Fy1 * Wx1 * onemWz1;
+            cur.jy[[j2, i2]] += Fy2 * onemWx2 * onemWz2;
+            cur.jy[[j2, i2p1]] += Fy2 * Wx2 * onemWz2;
+            cur.jz[[j1, i1]] += Fz1 * onemWx1 * onemWy1;
+            cur.jz[[j1, i1p1]] += Fz1 * Wx1 * onemWy1;
+            cur.jz[[j1p1, i1]] += Fz1 * onemWx1 * Wy1;
+            cur.jz[[j1p1, i1p1]] += Fz1 * Wx1 * Wy1;
+            cur.jz[[j2, i2]] += Fz2 * onemWx2 * onemWy2;
+            cur.jz[[j2, i2p1]] += Fz2 * Wx2 * onemWy2;
+            cur.jz[[j2p1, i2]] += Fz2 * onemWx2 * Wy2;
+            cur.jz[[j2p1, i2p1]] += Fz2 * Wx2 * Wy2;
 
             // only periodic BCs for now;
             let perx = ((p[sp].x[n] - minx).signum() + (p[sp].x[n] - maxx).signum()) * midx;
