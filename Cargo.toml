@@ -1,0 +1,20 @@
+[package]
+name = "cfilt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.65"
+clap = { version = "3.2.22", features = ["derive"] }
+hdf5 = { version = "0.8.1", features = ["blosc"] }
+ndarray = "0.15.6"
+
+[lib]
+name = "cfilt"
+path = "src/lib.rs"
+
+[[bin]]
+name = "deposit_particles"
+path = "bin/deposit_particles.rs"
