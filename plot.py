@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 from scipy.signal import convolve2d, medfilt2d
+from scipy.ndimage import gaussian_filter
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -28,6 +29,12 @@ parser.add_argument(
 )
 parser.add_argument("--flip", nargs="+", help="Which of the plots to invert", type=int)
 parser.add_argument(
+    "--show_original", action="store_true", help="Also original unfiltered plots"
+)
+parser.add_argument(
+    "--colorbar", action="store_true", help="Add colorbar to each panel"
+)
+parser.add_argument(
     "--no_flip",
     action="store_true",
     help="Don't invert any of the plots",
@@ -36,7 +43,11 @@ args = parser.parse_args()
 
 
 n = len(args.files)
-fig, ax = plt.subplots(1, n, figsize=(6 + 5 * n, 4))
+fig, ax = plt.subplots(
+    2 if args.show_original else 1,
+    n,
+    figsize=(6 + 5 * n, 6 if args.show_original else 4),
+)
 if n == 1:
     ax = [ax]
 
@@ -67,23 +78,34 @@ for i, fname in enumerate(args.files):
     current = f[args.var][:]
     if current.ndim == 3:
         current = current[0, :, :]
+    if args.show_original:
+        im = ax[0, i].imshow(current)
     if i in to_filter:
         for _ in range(passes[i]):
             if args.filter == "median":
                 current = medfilt2d(current, kernel_size=3)
-            else:
-                if args.filter == "gaussian":
-                    filter = np.matrix("1 2 1; 2 4 2; 1 2 1") / 16.0
-                elif args.filter == "uniform":
-                    filter = np.ones((3, 3)) / 9.0
+            elif args.filter == "gaussian":
+                current = gaussian_filter(current, sigma=1)
+            elif args.filter == "uniform":
+                filter = np.ones((3, 3)) / 9.0
                 current = convolve2d(current, filter, mode="same")
     if i in to_flip:
         current *= -1
-    im = ax[i].imshow(current)
-    ax[i].set_title(
-        f"{args.labels[i]} {'+ ' + str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+    fulltitle = (
+        args.labels[i]
+        + f"{'+' + str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
     )
-    plt.colorbar(im, ax=ax[i])
+    if args.show_original:
+        im = ax[1, i].imshow(current)
+        ax[0, i].set_title(args.labels[i])
+        ax[1, i].set_title(
+            f"{str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+        )
+    else:
+        im = ax[i].imshow(current)
+        ax[i].set_title(fulltitle)
+    if args.colorbar:
+        plt.colorbar(im, ax=ax[i])
     f.close()
 
 plt.suptitle(args.title)
