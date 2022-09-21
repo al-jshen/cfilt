@@ -29,6 +29,7 @@ parser.add_argument(
     type=str,
 )
 parser.add_argument("--flip", nargs="+", help="Which of the plots to invert", type=int)
+parser.add_argument("--cmap", help="Colormap of the plots", type=str, default="viridis")
 parser.add_argument(
     "--show_original", action="store_true", help="Also original unfiltered plots"
 )
@@ -36,7 +37,9 @@ parser.add_argument(
     "--colorbar", action="store_true", help="Add colorbar to each panel"
 )
 parser.add_argument(
-    "--show_gradients", action="store_true", help="Also plot Sobel filtered plots"
+    "--gradients",
+    choices=["sobel", "prewitt"],
+    help="Also show gradient operator filtered plots",
 )
 parser.add_argument(
     "--no_flip",
@@ -51,7 +54,7 @@ n = len(args.files)
 nrows = 1
 if args.show_original:
     nrows += 1
-if args.show_gradients:
+if args.gradients is not None:
     nrows += 1
 
 fig, ax = plt.subplots(
@@ -75,6 +78,12 @@ else:
 if args.no_flip:
     to_flip = []
 
+if args.gradients is not None:
+    if args.gradients == "sobel":
+        grad = filters.sobel
+    elif args.gradients == "prewitt":
+        grad = filters.prewitt
+
 if len(args.passes) == 1:
     passes = args.passes * n
 else:
@@ -93,7 +102,7 @@ for i, fname in enumerate(args.files):
         current = current[0, :, :]
 
     if args.show_original:
-        im = ax[0, i].imshow(current)
+        im = ax[0, i].imshow(current, cmap=args.cmap)
 
     if i in to_filter:
         for _ in range(passes[i]):
@@ -116,25 +125,26 @@ for i, fname in enumerate(args.files):
     if args.show_original:
         ax[0, i].set_title(args.labels[i])
 
-        im = ax[1, i].imshow(current)
+        im = ax[1, i].imshow(current, cmap=args.cmap)
         ax[1, i].set_title(
             f"{str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
         )
-        if args.show_gradients:
-            im = ax[2, i].imshow(filters.sobel(current))
-            ax[2, i].set_title("sobel filtered")
+        if args.gradients is not None:
+            im = ax[2, i].imshow(grad(current))
+            ax[2, i].set_title(f"{args.gradients} filtered")
     else:
-        if args.show_gradients:
-            im = ax[0, i].imshow(current)
+        if args.gradients is not None:
+            im = ax[0, i].imshow(current, cmap=args.cmap)
             ax[0, i].set_title(fulltitle)
-            im = ax[1, i].imshow(filters.sobel(current))
-            ax[1, i].set_title("sobel filtered")
+            im = ax[1, i].imshow(grad(current))
+            ax[1, i].set_title(f"{args.gradients} filtered")
         else:
-            im = ax[i].imshow(current)
+            im = ax[i].imshow(current, cmap=args.cmap)
             ax[i].set_title(fulltitle)
 
     if args.colorbar:
-        plt.colorbar(im, ax=ax[i])
+        plt.colorbar(im, ax=ax[0, i])
+
     f.close()
 
 plt.suptitle(args.title)
