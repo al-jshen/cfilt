@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import argparse
 from scipy.signal import convolve2d, medfilt2d
 from scipy.ndimage import gaussian_filter
+from skimage import filters
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -35,6 +36,9 @@ parser.add_argument(
     "--colorbar", action="store_true", help="Add colorbar to each panel"
 )
 parser.add_argument(
+    "--show_gradients", action="store_true", help="Also plot Sobel filtered plots"
+)
+parser.add_argument(
     "--no_flip",
     action="store_true",
     help="Don't invert any of the plots",
@@ -43,10 +47,17 @@ args = parser.parse_args()
 
 
 n = len(args.files)
+
+nrows = 1
+if args.show_original:
+    nrows += 1
+if args.show_gradients:
+    nrows += 1
+
 fig, ax = plt.subplots(
-    2 if args.show_original else 1,
+    nrows,
     n,
-    figsize=(6 + 5 * n, 6 if args.show_original else 4),
+    figsize=(6 + 5 * n, 2 + nrows * 3),
 )
 if n == 1:
     ax = [ax]
@@ -74,12 +85,16 @@ else:
 
 
 for i, fname in enumerate(args.files):
+
     f = h5py.File(fname, "r")
     current = f[args.var][:]
+
     if current.ndim == 3:
         current = current[0, :, :]
+
     if args.show_original:
         im = ax[0, i].imshow(current)
+
     if i in to_filter:
         for _ in range(passes[i]):
             if args.filter == "median":
@@ -89,21 +104,35 @@ for i, fname in enumerate(args.files):
             elif args.filter == "uniform":
                 filter = np.ones((3, 3)) / 9.0
                 current = convolve2d(current, filter, mode="same")
+
     if i in to_flip:
         current *= -1
+
     fulltitle = (
         args.labels[i]
         + f"{'+' + str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
     )
+
     if args.show_original:
-        im = ax[1, i].imshow(current)
         ax[0, i].set_title(args.labels[i])
+
+        im = ax[1, i].imshow(current)
         ax[1, i].set_title(
             f"{str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
         )
+        if args.show_gradients:
+            im = ax[2, i].imshow(filters.sobel(current))
+            ax[2, i].set_title("sobel filtered")
     else:
-        im = ax[i].imshow(current)
-        ax[i].set_title(fulltitle)
+        if args.show_gradients:
+            im = ax[0, i].imshow(current)
+            ax[0, i].set_title(fulltitle)
+            im = ax[1, i].imshow(filters.sobel(current))
+            ax[1, i].set_title("sobel filtered")
+        else:
+            im = ax[i].imshow(current)
+            ax[i].set_title(fulltitle)
+
     if args.colorbar:
         plt.colorbar(im, ax=ax[i])
     f.close()
