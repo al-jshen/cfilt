@@ -6,6 +6,8 @@ import argparse
 from scipy.signal import convolve2d, medfilt2d
 from scipy.ndimage import gaussian_filter
 from skimage import filters
+from skimage.restoration import denoise_tv_chambolle, denoise_wavelet
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -24,8 +26,9 @@ parser.add_argument(
 parser.add_argument("--title", help="Figure title", type=str)
 parser.add_argument(
     "--filter",
+    nargs="+",
     help="Filter to apply",
-    choices=["gaussian", "median", "uniform"],
+    choices=["gaussian", "median", "uniform", "tv", "wavelet"],
     type=str,
 )
 parser.add_argument("--flip", nargs="+", help="Which of the plots to invert", type=int)
@@ -84,6 +87,12 @@ if args.gradients is not None:
     elif args.gradients == "prewitt":
         grad = filters.prewitt
 
+if len(args.filter) == 1:
+    filters = [args.filter[0]] * n
+else:
+    assert len(args.filter) == n
+    filters = args.filter
+
 if len(args.passes) == 1:
     passes = args.passes * n
 else:
@@ -104,22 +113,31 @@ for i, fname in enumerate(args.files):
     if args.show_original:
         im = ax[0, i].imshow(current, cmap=args.cmap)
 
+    start = time.time()
     if i in to_filter:
         for _ in range(passes[i]):
-            if args.filter == "median":
+            if filters[i] == "median":
                 current = medfilt2d(current, kernel_size=3)
-            elif args.filter == "gaussian":
+            elif filters[i] == "gaussian":
                 current = gaussian_filter(current, sigma=1)
-            elif args.filter == "uniform":
+            elif filters[i] == "uniform":
                 filter = np.ones((3, 3)) / 9.0
                 current = convolve2d(current, filter, mode="same")
+            elif filters[i] == "tv":
+                current = denoise_tv_chambolle(current)
+            elif filters[i] == "wavelet":
+                current = denoise_wavelet(current)
 
     if i in to_flip:
         current *= -1
 
+    end = time.time()
+
     fulltitle = (
         args.labels[i]
-        + f"{'+' + str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+        + f"{'+' + str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+        + str(end - start)
+        + "s"
     )
 
     if args.show_original:
@@ -127,7 +145,9 @@ for i, fname in enumerate(args.files):
 
         im = ax[1, i].imshow(current, cmap=args.cmap)
         ax[1, i].set_title(
-            f"{str(passes[i]) + ' ' + args.filter + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+            f"{str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+            + str(end - start)
+            + "s"
         )
         if args.gradients is not None:
             im = ax[2, i].imshow(grad(current))
