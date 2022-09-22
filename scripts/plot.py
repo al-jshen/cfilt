@@ -136,7 +136,7 @@ for i, fname in enumerate(args.files):
     fulltitle = (
         args.labels[i]
         + f"{'+' + str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
-        + f"{end - start:.2f}s"
+        + f"{end - start:.2f}s" if i in to_filter else ""
     )
 
     if args.show_original:
@@ -145,7 +145,8 @@ for i, fname in enumerate(args.files):
         im = ax[1, i].imshow(current, cmap=args.cmap)
         ax[1, i].set_title(
             f"{str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
-            + f"{end - start:.2f}s"
+            + f"{end - start:.2f}s" if i in to_filter else ""
+        )
         )
         if args.gradients is not None:
             im = ax[2, i].imshow(grad(current))
