@@ -6,7 +6,13 @@ import argparse
 from scipy.signal import convolve2d, medfilt2d
 from scipy.ndimage import gaussian_filter
 from skimage import filters
-from skimage.restoration import denoise_tv_chambolle, denoise_wavelet
+from skimage.restoration import (
+    denoise_tv_chambolle,
+    denoise_wavelet,
+    estimate_sigma,
+    denoise_nl_means,
+    denoise_bilateral,
+)
 import time
 
 parser = argparse.ArgumentParser()
@@ -28,7 +34,7 @@ parser.add_argument(
     "--filter",
     nargs="+",
     help="Filter to apply",
-    choices=["gaussian", "median", "uniform", "tv", "wavelet"],
+    choices=["gaussian", "median", "uniform", "tv", "wavelet", "nlmeans", "bilateral"],
     type=str,
 )
 parser.add_argument("--flip", nargs="+", help="Which of the plots to invert", type=int)
@@ -127,6 +133,21 @@ for i, fname in enumerate(args.files):
                 current = denoise_tv_chambolle(current)
             elif filters[i] == "wavelet":
                 current = denoise_wavelet(current)
+            elif filters[i] == "nlmeans":
+                sigma_est = np.mean(estimate_sigma(current))
+                current = denoise_nl_means(
+                    current,
+                    h=0.8 * sigma_est,
+                    sigma=sigma_est,
+                    patch_size=5,
+                    patch_distance=6,
+                    fast_mode=False,
+                )
+            elif filters[i] == "bilateral":
+                sigma_est = np.mean(estimate_sigma(current))
+                current = denoise_bilateral(
+                    current, sigma_color=sigma_est, sigma_spatial=15
+                )
 
     if i in to_flip:
         current *= -1
