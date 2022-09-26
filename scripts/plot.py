@@ -165,7 +165,9 @@ for i, fname in enumerate(args.files):
     if args.show_original:
         ax[0, i].set_title(args.labels[i])
 
-        im = ax[1, i].imshow(current, interpolation="none", cmap=args.cmap)
+        im = ax[1, i].imshow(
+            current[:, 75][None, :], interpolation="none", cmap=args.cmap
+        )
         ax[1, i].set_title(
             f"{str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
             + f"{end - start:.2f}s"
@@ -174,18 +176,22 @@ for i, fname in enumerate(args.files):
         )
         if args.gradients is not None:
             im = ax[2, i].imshow(
-                grad(current),
+                grad(current)[:, 75][None, :],
                 interpolation="none",
             )
             ax[2, i].set_title(f"{args.gradients} filtered")
     else:
         if args.gradients is not None:
-            im = ax[0, i].imshow(current, interpolation="none", cmap=args.cmap)
+            im = ax[0, i].imshow(
+                current[:, 75][None, :], interpolation="none", cmap=args.cmap
+            )
             ax[0, i].set_title(fulltitle)
-            im = ax[1, i].imshow(grad(current))
+            im = ax[1, i].imshow(grad(current)[:, 75][None, :])
             ax[1, i].set_title(f"{args.gradients} filtered")
         else:
-            im = ax[i].imshow(current, interpolation="none", cmap=args.cmap)
+            im = ax[i].imshow(
+                current[:, 75][None, :], interpolation="none", cmap=args.cmap
+            )
             ax[i].set_title(fulltitle)
 
     if args.colorbar:
