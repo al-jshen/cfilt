@@ -249,17 +249,25 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", type=str, help="path to save model")
     parser.add_argument("--load_path", type=str, help="path to load model from")
     parser.add_argument("--model_name", type=str, help="name of saved model")
+    parser.add_argument(
+        "--tencrop", action="store_true", help="do 10-crop data augmentation"
+    )
     args = parser.parse_args()
 
     osize = tuple(args.im_size)
-    tfm = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            # transforms.Resize(tuple((np.array(osize) * 1.1).astype(int))),
-            # transforms.TenCrop(osize),
-            # transforms.Lambda(lambda crops: torch.stack(crops)),
-        ]
+    tfm = (
+        transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Resize(tuple((np.array(osize) * 1.1).astype(int))),
+                transforms.TenCrop(osize),
+                transforms.Lambda(lambda crops: torch.stack(crops)),
+            ]
+        )
+        if args.tencrop
+        else transforms.ToTensor()
     )
+
     ds = CDS(
         args.low_ppc,
         args.high_ppc,
@@ -350,10 +358,11 @@ if __name__ == "__main__":
     pred = pred.reshape(y.shape)
 
     fig, ax = plt.subplots(8, 3, figsize=(15, 30))
+    index = lambda x, i, crop: x[i][0] if crop else x[i][0][0]
     for i in range(8):
-        ax[i, 0].imshow(x[i][0].cpu().detach().numpy())
-        ax[i, 1].imshow(pred[i][0].cpu().detach().numpy())
-        ax[i, 2].imshow(y[i][0].cpu().detach().numpy())
+        ax[i, 0].imshow(index(x, i, args.tencrop).cpu().detach().numpy())
+        ax[i, 1].imshow(index(pred, i, args.tencrop).cpu().detach().numpy())
+        ax[i, 2].imshow(index(y, i, args.tencrop).cpu().detach().numpy())
     ax[0, 0].set_title(f"{args.low_ppc} ppc")
     ax[0, 1].set_title("denoised image")
     ax[0, 2].set_title(f"{args.high_ppc} ppc")
