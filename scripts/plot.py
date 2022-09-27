@@ -75,7 +75,7 @@ if args.gradients is not None:
 fig, ax = plt.subplots(
     nrows,
     n,
-    figsize=(4 + 3 * n, 2 + nrows * 3),
+    figsize=(4 + 3 * n, 4 + nrows * 3),
 )
 if n == 1:
     ax = [ax]
@@ -177,7 +177,7 @@ for i, fname in enumerate(args.files):
         if i in to_filter
         else ""
     )
-    fulltitle = args.labels[i] + title
+    fulltitle = args.labels[i] + " " + title
 
     fim = ax[ctr, i].imshow(current, interpolation="none", cmap=args.cmap)
     ax[ctr, i].set_title(fulltitle if ctr == 0 else title)
