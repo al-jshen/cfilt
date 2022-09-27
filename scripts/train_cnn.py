@@ -248,6 +248,7 @@ if __name__ == "__main__":
     parser.add_argument("--im_size", nargs="+", type=int, help="image size")
     parser.add_argument("--save_path", type=str, help="path to save model")
     parser.add_argument("--load_path", type=str, help="path to load model from")
+    parser.add_argument("--model_name", type=str, help="name of saved model")
     args = parser.parse_args()
 
     osize = tuple(args.im_size)
@@ -331,7 +332,7 @@ if __name__ == "__main__":
                     pbar.set_description(f"loss: {nloss:.2e}")
 
         if args.save_dir is not None:
-            torch.save(autoencoder.state_dict(), args.save_dir)
+            torch.save(autoencoder.state_dict(), f"{args.save_dir}/{args.model_name}")
 
         plt.plot(losses)
         plt.yscale("log")
