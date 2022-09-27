@@ -300,8 +300,9 @@ if __name__ == "__main__":
 
     if args.load_path is not None:
         autoencoder.load_state_dict(torch.load(args.load_path))
+    elif os.path.isfile(f"{args.save_dir}/{args.model_name}"):
+        autoencoder.load_state_dict(torch.load(f"{args.save_dir}/{args.model_name}"))
     else:
-
         loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
             x, y
         ) * (1 - args.alpha)
@@ -336,7 +337,10 @@ if __name__ == "__main__":
 
         plt.plot(losses)
         plt.yscale("log")
-        plt.savefig(f"{args.save_path}/loss.png", bbox_inches="tight")
+        plt.savefig(
+            f"{args.save_path}/loss-{args.low_ppc}-{args.high_ppc}.png",
+            bbox_inches="tight",
+        )
 
     autoencoder.eval()
     x, y = next(iter(test_dl))
@@ -354,4 +358,7 @@ if __name__ == "__main__":
     ax[0, 1].set_title("denoised image")
     ax[0, 2].set_title(f"{args.high_ppc} ppc")
 
-    plt.savefig(f"{args.save_path}/results.png", bbox_inches="tight")
+    plt.savefig(
+        f"{args.save_path}/results-{args.low_ppc}-{args.high_ppc}.png",
+        bbox_inches="tight",
+    )
