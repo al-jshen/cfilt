@@ -300,8 +300,8 @@ if __name__ == "__main__":
 
     if args.load_path is not None:
         autoencoder.load_state_dict(torch.load(args.load_path))
-    elif os.path.isfile(f"{args.save_dir}/{args.model_name}"):
-        autoencoder.load_state_dict(torch.load(f"{args.save_dir}/{args.model_name}"))
+    elif os.path.isfile(f"{args.save_path}/{args.model_name}"):
+        autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
     else:
         loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
             x, y
@@ -332,8 +332,8 @@ if __name__ == "__main__":
                 if i % 50 == 0:
                     pbar.set_description(f"loss: {nloss:.2e}")
 
-        if args.save_dir is not None:
-            torch.save(autoencoder.state_dict(), f"{args.save_dir}/{args.model_name}")
+        if args.save_path is not None:
+            torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
 
         plt.plot(losses)
         plt.yscale("log")
