@@ -340,13 +340,12 @@ if __name__ == "__main__":
                 if i % 50 == 0:
                     pbar.set_description(f"loss: {nloss:.2e}")
 
-        if args.save_path is not None:
-            torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
+        torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
 
         plt.plot(losses)
         plt.yscale("log")
         plt.savefig(
-            f"{args.save_path}/loss-{args.low_ppc}-{args.high_ppc}.png",
+            f"{args.save_path}/loss-{args.model_name}.png",
             bbox_inches="tight",
         )
 
@@ -368,6 +367,6 @@ if __name__ == "__main__":
     ax[0, 2].set_title(f"{args.high_ppc} ppc")
 
     plt.savefig(
-        f"{args.save_path}/results-{args.low_ppc}-{args.high_ppc}.png",
+        f"{args.save_path}/results-{args.model_name}.png",
         bbox_inches="tight",
     )
