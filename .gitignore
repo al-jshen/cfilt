@@ -80,3 +80,5 @@ docs/_build/
 # custom
 data
 .ipynb_checkpoints
+models
+out
