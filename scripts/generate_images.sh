@@ -3,7 +3,7 @@
 # $2 is the path to the deposit_particles binary
 
 n=$(ls $1 |rg prtl |sort |tail -n1 |sed 's/prtl.tot.//g')
-ppcs=(1600 32 16 4)
+ppcs=(1600 320 160 80 32 16 4 1)
 for ppc in "${ppcs[@]}"; do
   for i in $(seq -w 1 $n); do
     thin=$((1600 / ppc))
