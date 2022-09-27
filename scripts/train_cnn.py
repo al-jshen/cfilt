@@ -305,6 +305,9 @@ if __name__ == "__main__":
         device,
     )
     autoencoder = nn.Sequential(encoder, decoder).to(device)
+    autoencoder = nn.DataParallel(
+        autoencoder, device_ids=list(range(torch.cuda.device_count()))
+    )
 
     if args.load_path is not None:
         autoencoder.load_state_dict(torch.load(args.load_path))
@@ -321,7 +324,8 @@ if __name__ == "__main__":
         for e in (pbar := tqdm(range(args.epochs))):
 
             for i, (x, y) in enumerate(train_dl):
-                x, y = x.to(device), y.to(device)
+                with torch.cuda.device(0):
+                    x, y = x.to(device), y.to(device)
 
                 x = x.reshape(-1, 1, *osize)
                 y = y.reshape(-1, 1, *osize)
