@@ -45,6 +45,8 @@ parser.add_argument(
 parser.add_argument(
     "--colorbar", action="store_true", help="Add colorbar to each panel"
 )
+parser.add_argument("--row", type=int, help="Take a slice along a row")
+parser.add_argument("--col", type=int, help="Take a slice along a column")
 parser.add_argument(
     "--gradients",
     choices=["sobel", "prewitt"],
@@ -63,13 +65,17 @@ n = len(args.files)
 nrows = 1
 if args.show_original:
     nrows += 1
+if args.row is not None:
+    nrows += 1
+if args.col is not None:
+    nrows += 1
 if args.gradients is not None:
     nrows += 1
 
 fig, ax = plt.subplots(
     nrows,
     n,
-    figsize=(6 + 5 * n, 2 + nrows * 3),
+    figsize=(4 + 3 * n, 2 + nrows * 3),
 )
 if n == 1:
     ax = [ax]
@@ -108,6 +114,39 @@ else:
     passes = args.passes
 
 
+def filter(current, kind, passes):
+    for _ in range(passes):
+        if kind == "median":
+            current = medfilt2d(current, kernel_size=3)
+        elif kind == "gaussian":
+            current = gaussian_filter(current, sigma=1)
+        elif kind == "uniform":
+            filter = np.ones((3, 3)) / 9.0
+            current = convolve2d(current, filter, mode="same")
+        elif kind == "tv":
+            current = denoise_tv_chambolle(current)
+        elif kind == "wavelet":
+            current = denoise_wavelet(current)
+        elif kind == "nlmeans":
+            sigma_est = np.mean(estimate_sigma(current))
+            current = denoise_nl_means(
+                current,
+                h=0.8 * sigma_est,
+                sigma=sigma_est,
+                patch_size=5,
+                patch_distance=6,
+                fast_mode=False,
+            )
+        elif kind == "bilateral":
+            sigma_est = np.mean(estimate_sigma(current))
+            shift = current.min() - 1
+            current = denoise_bilateral(
+                current - shift, sigma_color=sigma_est, sigma_spatial=15
+            )
+            current += shift
+    return current
+
+
 for i, fname in enumerate(args.files):
 
     f = h5py.File(fname, "r")
@@ -116,86 +155,56 @@ for i, fname in enumerate(args.files):
     if current.ndim == 3:
         current = current[0, :, :]
 
-    if args.show_original:
-        im = ax[0, i].imshow(current, interpolation="none", cmap=args.cmap)
-
-    start = time.time()
-    if i in to_filter:
-        for _ in range(passes[i]):
-            if filters[i] == "median":
-                current = medfilt2d(current, kernel_size=3)
-            elif filters[i] == "gaussian":
-                current = gaussian_filter(current, sigma=1)
-            elif filters[i] == "uniform":
-                filter = np.ones((3, 3)) / 9.0
-                current = convolve2d(current, filter, mode="same")
-            elif filters[i] == "tv":
-                current = denoise_tv_chambolle(current)
-            elif filters[i] == "wavelet":
-                current = denoise_wavelet(current)
-            elif filters[i] == "nlmeans":
-                sigma_est = np.mean(estimate_sigma(current))
-                current = denoise_nl_means(
-                    current,
-                    h=0.8 * sigma_est,
-                    sigma=sigma_est,
-                    patch_size=5,
-                    patch_distance=6,
-                    fast_mode=False,
-                )
-            elif filters[i] == "bilateral":
-                sigma_est = np.mean(estimate_sigma(current))
-                current = denoise_bilateral(
-                    current, sigma_color=sigma_est, sigma_spatial=15
-                )
-
     if i in to_flip:
         current *= -1
 
+    ctr = 0
+    if args.show_original:
+        im = ax[ctr, i].imshow(current, cmap=args.cmap)
+        ax[ctr, i].set_title(args.labels[i])
+        ctr += 1
+
+    start = time.time()
+
+    if i in to_filter:
+        current = filter(current, filters[i], passes[i])
+
     end = time.time()
 
-    fulltitle = (
-        args.labels[i]
-        + f"{'+' + str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
-        + f"{end - start:.2f}s"
+    title = (
+        f"{str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
+        + f" {end - start:.2f}s"
         if i in to_filter
         else ""
     )
+    fulltitle = args.labels[i] + title
 
-    if args.show_original:
-        ax[0, i].set_title(args.labels[i])
+    fim = ax[ctr, i].imshow(current, interpolation="none", cmap=args.cmap)
+    ax[ctr, i].set_title(fulltitle if ctr == 0 else title)
+    fctr = ctr
+    ctr += 1
 
-        im = ax[1, i].imshow(
-            current[:, 75][None, :], interpolation="none", cmap=args.cmap
-        )
-        ax[1, i].set_title(
-            f"{str(passes[i]) + ' ' + filters[i] + ' passes' if i in to_filter and passes[i] > 0 else ''}"
-            + f"{end - start:.2f}s"
-            if i in to_filter
-            else ""
-        )
-        if args.gradients is not None:
-            im = ax[2, i].imshow(
-                grad(current)[:, 75][None, :],
-                interpolation="none",
-            )
-            ax[2, i].set_title(f"{args.gradients} filtered")
-    else:
-        if args.gradients is not None:
-            im = ax[0, i].imshow(
-                current[:, 75][None, :], interpolation="none", cmap=args.cmap
-            )
-            ax[0, i].set_title(fulltitle)
-            im = ax[1, i].imshow(grad(current)[:, 75][None, :])
-            ax[1, i].set_title(f"{args.gradients} filtered")
-        else:
-            im = ax[i].imshow(
-                current[:, 75][None, :], interpolation="none", cmap=args.cmap
-            )
-            ax[i].set_title(fulltitle)
+    if args.row is not None:
+        ax[ctr, i].plot(current[args.row, :])
+        ax[ctr, i].set_title(f"Row {args.row}")
+        ctr += 1
+
+    if args.col is not None:
+        ax[ctr, i].plot(current[:, args.col])
+        ax[ctr, i].set_title(f"Column {args.col}")
+        ctr += 1
+
+    if args.gradients is not None:
+        ax[ctr, i].imshow(grad(current), interpolation="none")
+        ax[ctr, i].set_title(f"{args.gradients} filtered")
+        ctr += 1
+
+    assert ctr == nrows
 
     if args.colorbar:
-        plt.colorbar(im, ax=ax[0, i])
+        if args.show_original:
+            fig.colorbar(im, ax=ax[0, i], fraction=0.046, pad=0.04)
+        fig.colorbar(fim, ax=ax[fctr, i], fraction=0.046, pad=0.04)
 
     f.close()
 
