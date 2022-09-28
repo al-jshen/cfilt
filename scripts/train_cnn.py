@@ -386,6 +386,8 @@ if __name__ == "__main__":
                     loss /= x.shape[0]
 
                 scaler.scale(loss).backward()
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(autoencoder.parameters(), 1.0)
                 scaler.step(optimizer)
                 scaler.update()
 
