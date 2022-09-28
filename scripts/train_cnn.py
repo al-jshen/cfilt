@@ -90,10 +90,10 @@ class ResidualBlock(nn.Module):
 
     def forward(self, x):
         residual = x
-        out = F.relu(self.bn(self.conv1(x)))
+        out = F.gelu(self.bn(self.conv1(x)))
         out = self.bn(self.conv2(out))
         out = out + residual
-        out = F.relu(out)
+        out = F.gelu(out)
         return out
 
 
@@ -135,7 +135,7 @@ class ConvXCoder(nn.Module):
             x = self.view(x)
 
         x = self.conv_in(x)
-        x = F.relu(self.bn(x))
+        x = F.gelu(self.bn(x))
 
         for i in range(self.num_res_blocks):
             x = self.res_blocks[i](x)
