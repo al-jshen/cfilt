@@ -364,44 +364,43 @@ if __name__ == "__main__":
             x, y
         ) * (1 - args.alpha)
         optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
+        scaler = torch.cuda.amp.GradScaler()
 
         losses = []
 
         for e in (pbar := tqdm(range(args.epochs))):
 
             for i, (x, y) in enumerate(train_dl):
+                optimizer.zero_grad()
+
                 with torch.cuda.device(0):
                     x, y = x.to(device), y.to(device)
-                    x = x.reshape(-1, 1, *osize)
-                    y = y.reshape(-1, 1, *osize)
+                x = x.reshape(-1, 1, *osize)
+                y = y.reshape(-1, 1, *osize)
 
-                    with torch.cuda.amp.autocast():
-                        pred = autoencoder(x)
-                        pred_denorm = (
-                            pred * ds.std[args.low_ppc] + ds.mean[args.low_ppc]
-                        )
-                        y_denorm = y * ds.std[args.high_ppc] + ds.mean[args.high_ppc]
-                        loss = loss_fn(pred_denorm, y_denorm)
+                with torch.cuda.amp.autocast():
+                    pred = autoencoder(x)
+                    pred_denorm = pred * ds.std[args.low_ppc] + ds.mean[args.low_ppc]
+                    y_denorm = y * ds.std[args.high_ppc] + ds.mean[args.high_ppc]
+                    loss = loss_fn(pred_denorm, y_denorm)
+                    loss /= x.shape[0]
 
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
-                nloss = loss.item() / x.shape[0]
+                losses.append(loss.item())
 
-                losses.append(nloss)
-
-                if i % 50 == 0:
-                    pbar.set_description(f"loss: {nloss:.2e}")
+                pbar.set_description(f"loss: {loss.item():.2e}")
 
         torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
 
-        # plt.plot(losses)
-        # plt.yscale("log")
-        # plt.savefig(
-        #     f"{args.save_path}/{args.model_name}-loss.png",
-        #     bbox_inches="tight",
-        # )
+        plt.plot(losses)
+        plt.yscale("log")
+        plt.savefig(
+            f"{args.save_path}/{args.model_name}-loss.png",
+            bbox_inches="tight",
+        )
 
         # trainer = pl.Trainer(
         #     "gpu",
