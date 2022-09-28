@@ -47,8 +47,8 @@ class CDS(Dataset):
                     js.append(f[j][:])
             self.images[ppc] = np.stack(js)
             if normalize:
-                self.mean[ppc] = self.images[ppc].mean(axis=0)
-                self.std[ppc] = self.images[ppc].std(axis=0)
+                self.mean[ppc] = self.images[ppc].mean()
+                self.std[ppc] = self.images[ppc].std()
                 self.images[ppc] = (self.images[ppc] - self.mean[ppc]) / self.std[ppc]
 
     def __len__(self):
