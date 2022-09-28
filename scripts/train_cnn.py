@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset, random_split
 from tqdm.auto import tqdm
 
-import pytorch_lightning as pl
+# import pytorch_lightning as pl
 
 
 class CDS(Dataset):
@@ -146,38 +146,38 @@ class ConvXCoder(nn.Module):
         return x
 
 
-class LAutoEncoder(pl.LightningModule):
-    def __init__(self, autoencoder, mean, std, osize):
-        super().__init__()
-        self.autoencoder = autoencoder
-        self.loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
-            x, y
-        ) * (1 - args.alpha)
-        self.mean = mean
-        self.std = std
-        self.osize = osize
+# class LAutoEncoder(pl.LightningModule):
+#     def __init__(self, autoencoder, mean, std, osize):
+#         super().__init__()
+#         self.autoencoder = autoencoder
+#         self.loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
+#             x, y
+#         ) * (1 - args.alpha)
+#         self.mean = mean
+#         self.std = std
+#         self.osize = osize
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch
+#     def training_step(self, batch, batch_idx):
+#         x, y = batch
 
-        with torch.cuda.device(0):
-            x, y = x.to(device), y.to(device)
+#         with torch.cuda.device(0):
+#             x, y = x.to(device), y.to(device)
 
-        x = x.reshape(-1, 1, *self.osize)
-        y = y.reshape(-1, 1, *self.osize)
+#         x = x.reshape(-1, 1, *self.osize)
+#         y = y.reshape(-1, 1, *self.osize)
 
-        pred = self.autoencoder(x)
-        pred_denorm = pred * self.std[args.low_ppc] + self.mean[args.low_ppc]
-        y_denorm = y * self.std[args.high_ppc] + self.mean[args.high_ppc]
-        loss = self.loss_fn(pred_denorm, y_denorm)
+#         pred = self.autoencoder(x)
+#         pred_denorm = pred * self.std[args.low_ppc] + self.mean[args.low_ppc]
+#         y_denorm = y * self.std[args.high_ppc] + self.mean[args.high_ppc]
+#         loss = self.loss_fn(pred_denorm, y_denorm)
 
-        self.log("loss", loss.item(), prog_bar=True)
+#         self.log("loss", loss.item(), prog_bar=True)
 
-        return loss
+#         return loss
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=args.lr)
-        return optimizer
+#     def configure_optimizers(self):
+#         optimizer = torch.optim.Adam(self.parameters(), lr=args.lr)
+#         return optimizer
 
 
 class MS_SSIM_L1_Loss(nn.Module):
@@ -348,51 +348,53 @@ if __name__ == "__main__":
         device,
     )
     autoencoder = nn.Sequential(encoder, decoder).to(device)
-    lautoencoder = LAutoEncoder(autoencoder, ds.mean, ds.std, osize)
-    # autoencoder = nn.DataParallel(
-    #     autoencoder, device_ids=list(range(torch.cuda.device_count()))
-    # )
+    # lautoencoder = LAutoEncoder(autoencoder, ds.mean, ds.std, osize)
+    autoencoder = nn.DataParallel(
+        autoencoder, device_ids=list(range(torch.cuda.device_count()))
+    )
 
     if args.load_path is not None:
-        # autoencoder.load_state_dict(torch.load(args.load_path))
-        LAutoEncoder.load_from_checkpoint(args.load_path)
+        autoencoder.load_state_dict(torch.load(args.load_path))
+        # LAutoEncoder.load_from_checkpoint(args.load_path)
     elif os.path.isfile(f"{args.save_path}/{args.model_name}"):
-        # autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
-        LAutoEncoder.load_from_checkpoint(f"{args.save_path}/{args.model_name}")
+        autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
+        # LAutoEncoder.load_from_checkpoint(f"{args.save_path}/{args.model_name}")
     else:
-        # loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
-        #     x, y
-        # ) * (1 - args.alpha)
-        # optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
+        loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
+            x, y
+        ) * (1 - args.alpha)
+        optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
 
-        # losses = []
+        losses = []
 
-        # for e in (pbar := tqdm(range(args.epochs))):
+        for e in (pbar := tqdm(range(args.epochs))):
 
-        #     for i, (x, y) in enumerate(train_dl):
-        #         with torch.cuda.device(0):
-        #             x, y = x.to(device), y.to(device)
+            for i, (x, y) in enumerate(train_dl):
+                with torch.cuda.device(0):
+                    x, y = x.to(device), y.to(device)
+                    x = x.reshape(-1, 1, *osize)
+                    y = y.reshape(-1, 1, *osize)
 
-        #         x = x.reshape(-1, 1, *osize)
-        #         y = y.reshape(-1, 1, *osize)
+                    with torch.cuda.amp.autocast():
+                        pred = autoencoder(x)
+                        pred_denorm = (
+                            pred * ds.std[args.low_ppc] + ds.mean[args.low_ppc]
+                        )
+                        y_denorm = y * ds.std[args.high_ppc] + ds.mean[args.high_ppc]
+                        loss = loss_fn(pred_denorm, y_denorm)
 
-        #         pred = autoencoder(x)
-        #         pred_denorm = pred * ds.std[args.low_ppc] + ds.mean[args.low_ppc]
-        #         y_denorm = y * ds.std[args.high_ppc] + ds.mean[args.high_ppc]
-        #         loss = loss_fn(pred_denorm, y_denorm)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-        #         optimizer.zero_grad()
-        #         loss.backward()
-        #         optimizer.step()
+                nloss = loss.item() / x.shape[0]
 
-        #         nloss = loss.item() / x.shape[0]
+                losses.append(nloss)
 
-        #         losses.append(nloss)
+                if i % 50 == 0:
+                    pbar.set_description(f"loss: {nloss:.2e}")
 
-        #         if i % 50 == 0:
-        #             pbar.set_description(f"loss: {nloss:.2e}")
-
-        # torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
+        torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
 
         # plt.plot(losses)
         # plt.yscale("log")
@@ -401,17 +403,17 @@ if __name__ == "__main__":
         #     bbox_inches="tight",
         # )
 
-        trainer = pl.Trainer(
-            "gpu",
-            devices=torch.cuda.device_count(),
-            strategy="ddp",
-            precision=16,
-            default_root_dir=args.checkpoint_path,
-        )
-        trainer.fit(model=lautoencoder, train_dataloaders=train_dl)
-        trainer.save_checkpoint(f"{args.save_path}/{args.model_name}")
+        # trainer = pl.Trainer(
+        #     "gpu",
+        #     devices=torch.cuda.device_count(),
+        #     strategy="ddp",
+        #     precision=16,
+        #     default_root_dir=args.checkpoint_path,
+        # )
+        # trainer.fit(model=lautoencoder, train_dataloaders=train_dl)
+        # trainer.save_checkpoint(f"{args.save_path}/{args.model_name}")
 
-    autoencoder = lautoencoder.autoencoder
+    # autoencoder = lautoencoder.autoencoder
     autoencoder.eval()
     x, y = next(iter(test_dl))
     x = x.reshape(-1, 1, *osize)
