@@ -284,6 +284,9 @@ if __name__ == "__main__":
     parser.add_argument("--im_size", nargs="+", type=int, help="image size")
     parser.add_argument("--save_path", type=str, help="path to save model")
     parser.add_argument("--load_path", type=str, help="path to load model from")
+    parser.add_argument(
+        "--checkpoint_path", type=str, help="path to save checkpoint files to"
+    )
     parser.add_argument("--model_name", type=str, help="name of saved model")
     parser.add_argument(
         "--tencrop", action="store_true", help="do 10-crop data augmentation"
@@ -351,9 +354,11 @@ if __name__ == "__main__":
     # )
 
     if args.load_path is not None:
-        autoencoder.load_state_dict(torch.load(args.load_path))
+        # autoencoder.load_state_dict(torch.load(args.load_path))
+        LAutoEncoder.load_from_checkpoint(args.load_path)
     elif os.path.isfile(f"{args.save_path}/{args.model_name}"):
-        autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
+        # autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
+        LAutoEncoder.load_from_checkpoint(f"{args.save_path}/{args.model_name}")
     else:
         # loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
         #     x, y
@@ -401,8 +406,10 @@ if __name__ == "__main__":
             devices=torch.cuda.device_count(),
             strategy="ddp",
             precision=16,
+            default_root_dir=args.checkpoint_path,
         )
         trainer.fit(model=lautoencoder, train_dataloaders=train_dl)
+        trainer.save_checkpoint(f"{args.save_path}/{args.model_name}")
 
     autoencoder = lautoencoder.autoencoder
     autoencoder.eval()
