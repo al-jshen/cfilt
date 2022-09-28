@@ -47,8 +47,8 @@ class CDS(Dataset):
                     js.append(f[j][:])
             self.images[ppc] = np.stack(js)
             if normalize:
-                self.mean[ppc] = self.images[ppc].mean()
-                self.std[ppc] = self.images[ppc].std()
+                self.mean[ppc] = self.images[ppc].mean(axis=0)
+                self.std[ppc] = self.images[ppc].std(axis=0)
                 self.images[ppc] = (self.images[ppc] - self.mean[ppc]) / self.std[ppc]
 
     def __len__(self):
@@ -331,7 +331,9 @@ if __name__ == "__main__":
                 y = y.reshape(-1, 1, *osize)
 
                 pred = autoencoder(x)
-                loss = loss_fn(pred, y)
+                pred_denorm = pred * ds.std[args.low_ppc] + ds.mean[args.low_ppc]
+                y_denorm = y * ds.std[args.high_ppc] + ds.mean[args.high_ppc]
+                loss = loss_fn(pred_denorm, y_denorm)
 
                 optimizer.zero_grad()
                 loss.backward()
