@@ -349,7 +349,7 @@ if __name__ == "__main__":
         plt.plot(losses)
         plt.yscale("log")
         plt.savefig(
-            f"{args.save_path}/loss-{args.model_name}.png",
+            f"{args.save_path}/{args.model_name}-loss.png",
             bbox_inches="tight",
         )
 
@@ -360,17 +360,19 @@ if __name__ == "__main__":
     x = x.reshape(y.shape)
     pred = pred.reshape(y.shape)
 
-    fig, ax = plt.subplots(8, 3, figsize=(15, 30))
-    index = lambda x, i, crop: x[i][0] if crop else x[i][0][0]
+    fig, ax = plt.subplots(8, 4, figsize=(18, 30))
+    index = lambda x, i, crop: x[i][0][0] if crop else x[i][0]
     for i in range(8):
         ax[i, 0].imshow(index(x, i, args.tencrop).cpu().detach().numpy())
         ax[i, 1].imshow(index(pred, i, args.tencrop).cpu().detach().numpy())
         ax[i, 2].imshow(index(y, i, args.tencrop).cpu().detach().numpy())
+        ax[i, 3].imshow(index(y - pred.cpu(), i, args.tencrop).cpu().detach().numpy())
     ax[0, 0].set_title(f"{args.low_ppc} ppc")
     ax[0, 1].set_title("denoised image")
     ax[0, 2].set_title(f"{args.high_ppc} ppc")
+    ax[0, 3].set_title("residual")
 
     plt.savefig(
-        f"{args.save_path}/results-{args.model_name}.png",
+        f"{args.save_path}/{args.model_name}-results.png",
         bbox_inches="tight",
     )

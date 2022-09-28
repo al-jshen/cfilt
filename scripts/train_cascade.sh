@@ -1,12 +1,12 @@
 #!/bin/bash
 
-channels=4
-resblocks=4
+channels=2
+resblocks=3
 batchsize=8
-epochs=3000
+epochs=2000
 
-low_ppc=(320 160 80 32 16 8 4 1)
-high_ppc=(1600 320 160 80 32 16 8 4)
+low_ppc=(320 160) # 80 32 16 8 4 1)
+high_ppc=(1600 320) # 160 80 32 16 8 4)
 
 for i in "${!low_ppc[@]}"; do
 	lp="${low_ppc[i]}"
