@@ -402,7 +402,7 @@ if __name__ == "__main__":
         # )
 
         trainer = pl.Trainer(
-            "gpu" if torch.cuda.is_available() else None,
+            "gpu",
             devices=torch.cuda.device_count(),
             strategy="ddp",
             precision=16,
