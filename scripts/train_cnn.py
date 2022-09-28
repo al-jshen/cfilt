@@ -86,13 +86,13 @@ class ResidualBlock(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(channels, channels, (3, 3), padding=1)
         self.conv2 = nn.Conv2d(channels, channels, (3, 3), padding=1)
-        self.bn = nn.BatchNorm2d(channels)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x):
-        residual = x
-        out = F.gelu(self.bn(self.conv1(x)))
-        out = self.bn(self.conv2(out))
-        out = out + residual
+        out = F.gelu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out = out + x
         out = F.gelu(out)
         return out
 
