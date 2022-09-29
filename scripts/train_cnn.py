@@ -220,7 +220,13 @@ class MS_SSIM_L1_Loss(nn.Module):
         return loss_mix.mean()
 
 
+def dbg(x):
+    if args.verbose:
+        print(x)
+
+
 if __name__ == "__main__":
+    dbg("Parsing args")
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=16, help="batch size")
     parser.add_argument(
@@ -249,6 +255,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_path", type=str, help="path to save model")
     parser.add_argument("--load_path", type=str, help="path to load model from")
     parser.add_argument("--train", action="store_true", help="keep training models")
+    parser.add_argument("--verbose", action="store_true", help="print stuff")
     parser.add_argument(
         "--mixed", action="store_true", help="train with mixed precision"
     )
@@ -272,6 +279,9 @@ if __name__ == "__main__":
         else transforms.ToTensor()
     )
 
+    dbg(
+        f"Making dataset with low_ppc={args.low_ppc}, high_ppc={args.high_ppc}, and with tencrop={str(args.tencrop)}"
+    )
     ds = CDS(
         args.low_ppc,
         args.high_ppc,
@@ -283,6 +293,7 @@ if __name__ == "__main__":
 
     train_len = int(len(ds) * 0.95)
     train_ds, test_ds = random_split(ds, (train_len, len(ds) - train_len))
+    dbg(f"training set has {len(train_ds)} samples")
 
     dl_cfg = dict(
         batch_size=args.batch_size,
@@ -295,7 +306,9 @@ if __name__ == "__main__":
     test_dl = DataLoader(test_ds, **dl_cfg)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    dbg(f"Using device {device}")
 
+    dbg("Making model")
     encoder = ConvXCoder(
         osize,
         args.im_channels,
@@ -313,17 +326,18 @@ if __name__ == "__main__":
         device,
     )
     autoencoder = nn.Sequential(encoder, decoder).to(device)
-    # lautoencoder = LAutoEncoder(autoencoder, ds.mean, ds.std, osize)
     autoencoder = nn.DataParallel(
         autoencoder, device_ids=list(range(torch.cuda.device_count()))
     )
 
     if args.load_path is not None:
         autoencoder.load_state_dict(torch.load(args.load_path))
+        dbg(f"Loaded saved model from {args.load_path}")
     elif os.path.isfile(f"{args.save_path}/{args.model_name}"):
         autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
-
+        dbg(f"Model already exists, loading from {args.save_path}/{args.model_name}")
     if args.train:
+        dbg("Beginning training loop")
         loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
             x, y
         ) * (1 - args.alpha)
@@ -359,8 +373,10 @@ if __name__ == "__main__":
 
                 pbar.set_description(f"loss: {loss.item():.2e}")
 
+        dbg(f"Saving model to {args.save_path}/{args.model_name}")
         torch.save(autoencoder.state_dict(), f"{args.save_path}/{args.model_name}")
 
+        dbg("Plotting losses")
         plt.plot(losses)
         plt.yscale("log")
         plt.savefig(
@@ -368,6 +384,7 @@ if __name__ == "__main__":
             bbox_inches="tight",
         )
 
+    dbg("Making test images")
     autoencoder.eval()
     x, y = next(iter(test_dl))
     x = x.reshape(-1, 1, *osize)
