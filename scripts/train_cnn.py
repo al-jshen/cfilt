@@ -13,6 +13,8 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset, random_split
 from tqdm.auto import tqdm
 
+VERBOSE = 0
+
 
 class CDS(Dataset):
     def __init__(self, low_ppc, high_ppc, j, out_dir, normalize=True, transform=None):
@@ -226,7 +228,6 @@ def dbg(x):
 
 
 if __name__ == "__main__":
-    dbg("Parsing args")
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=16, help="batch size")
     parser.add_argument(
@@ -264,6 +265,7 @@ if __name__ == "__main__":
         "--tencrop", action="store_true", help="do 10-crop data augmentation"
     )
     args = parser.parse_args()
+    dbg("Args parsed")
 
     osize = tuple(args.im_size)
     tfm = (
