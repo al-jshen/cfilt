@@ -13,8 +13,6 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Dataset, random_split
 from tqdm.auto import tqdm
 
-# import pytorch_lightning as pl
-
 
 class CDS(Dataset):
     def __init__(self, low_ppc, high_ppc, j, out_dir, normalize=True, transform=None):
@@ -146,40 +144,6 @@ class ConvXCoder(nn.Module):
         return x
 
 
-# class LAutoEncoder(pl.LightningModule):
-#     def __init__(self, autoencoder, mean, std, osize):
-#         super().__init__()
-#         self.autoencoder = autoencoder
-#         self.loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
-#             x, y
-#         ) * (1 - args.alpha)
-#         self.mean = mean
-#         self.std = std
-#         self.osize = osize
-
-#     def training_step(self, batch, batch_idx):
-#         x, y = batch
-
-#         with torch.cuda.device(0):
-#             x, y = x.to(device), y.to(device)
-
-#         x = x.reshape(-1, 1, *self.osize)
-#         y = y.reshape(-1, 1, *self.osize)
-
-#         pred = self.autoencoder(x)
-#         pred_denorm = pred * self.std[args.low_ppc] + self.mean[args.low_ppc]
-#         y_denorm = y * self.std[args.high_ppc] + self.mean[args.high_ppc]
-#         loss = self.loss_fn(pred_denorm, y_denorm)
-
-#         self.log("loss", loss.item(), prog_bar=True)
-
-#         return loss
-
-#     def configure_optimizers(self):
-#         optimizer = torch.optim.Adam(self.parameters(), lr=args.lr)
-#         return optimizer
-
-
 class MS_SSIM_L1_Loss(nn.Module):
     def __init__(
         self,
@@ -284,6 +248,10 @@ if __name__ == "__main__":
     parser.add_argument("--im_size", nargs="+", type=int, help="image size")
     parser.add_argument("--save_path", type=str, help="path to save model")
     parser.add_argument("--load_path", type=str, help="path to load model from")
+    parser.add_argument("--train", action="store_true", help="keep training models")
+    parser.add_argument(
+        "--mixed", action="store_true", help="train with mixed precision"
+    )
     parser.add_argument(
         "--checkpoint_path", type=str, help="path to save checkpoint files to"
     )
@@ -359,12 +327,13 @@ if __name__ == "__main__":
     elif os.path.isfile(f"{args.save_path}/{args.model_name}"):
         autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
         # LAutoEncoder.load_from_checkpoint(f"{args.save_path}/{args.model_name}")
-    else:
+
+    if args.train:
         loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
             x, y
         ) * (1 - args.alpha)
         optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
-        scaler = torch.cuda.amp.GradScaler()
+        scaler = torch.cuda.amp.GradScaler(enabled=args.mixed)
 
         losses = []
 
@@ -378,7 +347,7 @@ if __name__ == "__main__":
                 x = x.reshape(-1, 1, *osize)
                 y = y.reshape(-1, 1, *osize)
 
-                with torch.cuda.amp.autocast():
+                with torch.cuda.amp.autocast(enabled=args.mixed):
                     pred = autoencoder(x)
                     pred_denorm = pred * ds.std[args.low_ppc] + ds.mean[args.low_ppc]
                     y_denorm = y * ds.std[args.high_ppc] + ds.mean[args.high_ppc]
@@ -404,17 +373,6 @@ if __name__ == "__main__":
             bbox_inches="tight",
         )
 
-        # trainer = pl.Trainer(
-        #     "gpu",
-        #     devices=torch.cuda.device_count(),
-        #     strategy="ddp",
-        #     precision=16,
-        #     default_root_dir=args.checkpoint_path,
-        # )
-        # trainer.fit(model=lautoencoder, train_dataloaders=train_dl)
-        # trainer.save_checkpoint(f"{args.save_path}/{args.model_name}")
-
-    # autoencoder = lautoencoder.autoencoder
     autoencoder.eval()
     x, y = next(iter(test_dl))
     x = x.reshape(-1, 1, *osize)
