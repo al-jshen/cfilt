@@ -252,9 +252,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mixed", action="store_true", help="train with mixed precision"
     )
-    parser.add_argument(
-        "--checkpoint_path", type=str, help="path to save checkpoint files to"
-    )
     parser.add_argument("--model_name", type=str, help="name of saved model")
     parser.add_argument(
         "--tencrop", action="store_true", help="do 10-crop data augmentation"
@@ -323,10 +320,8 @@ if __name__ == "__main__":
 
     if args.load_path is not None:
         autoencoder.load_state_dict(torch.load(args.load_path))
-        # LAutoEncoder.load_from_checkpoint(args.load_path)
     elif os.path.isfile(f"{args.save_path}/{args.model_name}"):
         autoencoder.load_state_dict(torch.load(f"{args.save_path}/{args.model_name}"))
-        # LAutoEncoder.load_from_checkpoint(f"{args.save_path}/{args.model_name}")
 
     if args.train:
         loss_fn = lambda x, y: MS_SSIM_L1_Loss()(x, y) * args.alpha + nn.L1Loss()(
