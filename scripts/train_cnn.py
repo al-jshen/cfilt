@@ -80,8 +80,7 @@ if __name__ == "__main__":
         f"Making dataset with low_ppc={args.low_ppc}, high_ppc={args.high_ppc}, and with tencrop={str(args.tencrop)}"
     )
     ds = CDS(
-        args.low_ppc,
-        args.high_ppc,
+        [args.low_ppc, args.high_ppc],
         args.var,
         args.sim_dir,
         normalize=True,
