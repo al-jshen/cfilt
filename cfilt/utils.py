@@ -59,9 +59,9 @@ class CDS(Dataset):
 
 
 def unpack(x):
-    x1, x2 = list(zip(*x))
-    x1, x2 = torch.stack(x1), torch.stack(x2)
-    return x1, x2
+    xs = list(zip(*x))
+    xs = [torch.stack(i) for i in xs]
+    return xs
 
 
 class View(nn.Module):
