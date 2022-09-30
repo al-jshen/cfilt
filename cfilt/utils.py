@@ -29,13 +29,15 @@ class CDS(Dataset):
             for ppc in ppcs
         ]
         setfiles = [set(i) for i in nfiles]
-        assert len(np.unique(setfiles)) == 1, "not all ppcs have the same number of files"
+        assert (
+            len(np.unique(setfiles)) == 1
+        ), "not all ppcs have the same number of files"
         self.total_size = len(nfiles[0])
 
         for ppc in tqdm(ppcs):
             self.images[ppc] = {}
             js = []
-            for i in tqdm(range(1, self.total_size + 1)):
+            for i in range(1, self.total_size + 1):
                 with h5py.File(f"{out_dir}/out-{ppc}.{str(i).zfill(3)}", "r") as f:
                     js.append(f[j][:])
             self.images[ppc] = np.stack(js)
