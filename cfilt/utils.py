@@ -23,7 +23,7 @@ class CDS(Dataset):
         nfiles = [
             [
                 int(i.split(".")[-1])
-                for i in os.listdir("./out/")
+                for i in os.listdir(out_dir)
                 if i.startswith(f"out-{ppc}.")
             ]
             for ppc in ppcs
