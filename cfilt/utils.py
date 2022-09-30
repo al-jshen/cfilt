@@ -10,31 +10,30 @@ import numpy as np
 
 
 class CDS(Dataset):
-    def __init__(self, low_ppc, high_ppc, j, out_dir, normalize=True, transform=None):
+    def __init__(self, ppcs, j, out_dir, normalize=True, transform=None):
 
         super().__init__()
-        self.low_ppc = low_ppc
-        self.high_ppc = high_ppc
+        self.ppcs = ppcs
         self.transform = transform
         self.mean = {}
         self.std = {}
 
         self.images = {}
 
-        nfiles_low = [
-            int(i.split(".")[-1])
-            for i in os.listdir("./out/")
-            if i.startswith(f"out-{low_ppc}.")
+        nfiles = [
+            [
+                int(i.split(".")[-1])
+                for i in os.listdir("./out/")
+                if i.startswith(f"out-{ppc}.")
+            ]
+            for ppc in ppcs
         ]
-        nfiles_high = [
-            int(i.split(".")[-1])
-            for i in os.listdir("./out/")
-            if i.startswith(f"out-{high_ppc}.")
-        ]
-        assert set(nfiles_low) == set(nfiles_high)
-        self.total_size = len(nfiles_low)
+        assert (
+            len([set(i) for i in nfiles]) == 1
+        ), "Not all ppcs have same number of files"
+        self.total_size = len(nfiles[0])
 
-        for ppc in tqdm([low_ppc, high_ppc]):
+        for ppc in tqdm(ppcs):
             self.images[ppc] = {}
             js = []
             for i in tqdm(range(1, self.total_size + 1)):
@@ -50,14 +49,12 @@ class CDS(Dataset):
         return self.total_size
 
     def __getitem__(self, i):
-        lr = self.images[self.low_ppc][i]
-        hr = self.images[self.high_ppc][i]
+        ims = [self.images[ppc][i] for ppc in self.ppcs]
 
         if self.transform:
-            lr = self.transform(lr)
-            hr = self.transform(hr)
+            ims = [self.transform(im) for im in ims]
 
-        return lr, hr
+        return ims
 
 
 def unpack(x):
