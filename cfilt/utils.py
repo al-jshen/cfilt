@@ -7,6 +7,8 @@ from tqdm.auto import tqdm
 import h5py
 import hdf5plugin
 import numpy as np
+from collections import OrderedDict
+import copy
 
 
 class CDS(Dataset):
@@ -211,3 +213,35 @@ class MS_SSIM_L1_Loss(nn.Module):
         loss_mix = self.compensation * loss_mix
 
         return loss_mix.mean()
+
+
+def remove_data_parallel(old_state_dict):
+    new_state_dict = OrderedDict()
+
+    for k, v in old_state_dict.items():
+        name = k[7:]  # remove `module.`
+        new_state_dict[name] = v
+
+    return new_state_dict
+
+
+class Cascade(nn.Module):
+    def __init__(self, base_model, load_paths):
+        super().__init__()
+        self.models = [copy.deepcopy(base_model) for _ in range(len(load_paths))]
+        for i, m in tqdm(enumerate(self.models), total=len(load_paths)):
+            state_dict = torch.load(load_paths[i])
+            state_dict = remove_data_parallel(state_dict)
+            m.load_state_dict(state_dict)
+        self.models = nn.ModuleList(self.models)
+        self.intermediates = []
+
+    def get_intermediates(self):
+        return self.intermediates
+
+    def forward(self, x):
+        self.intermediates.clear()
+        for m in self.models:
+            x = m(x)
+            self.intermediates.append(x)
+        return x
