@@ -10,6 +10,8 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, random_split
 from tqdm.auto import tqdm
+import sys
+sys.path.insert(0, '/scratch/gpfs/js5013/programs/cfilt')
 from cfilt.utils import *
 
 VERBOSE = 0

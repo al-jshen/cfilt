@@ -28,9 +28,8 @@ class CDS(Dataset):
             ]
             for ppc in ppcs
         ]
-        assert (
-            len([set(i) for i in nfiles]) == 1
-        ), "Not all ppcs have same number of files"
+        setfiles = [set(i) for i in nfiles]
+        assert len(np.unique(setfiles)) == 1, "not all ppcs have the same number of files"
         self.total_size = len(nfiles[0])
 
         for ppc in tqdm(ppcs):
