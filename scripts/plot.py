@@ -42,7 +42,16 @@ parser.add_argument(
     "--filter",
     nargs="+",
     help="Filter to apply",
-    choices=["gaussian", "median", "uniform", "tv", "wavelet", "nlmeans", "bilateral"],
+    choices=[
+        "gaussian",
+        "median",
+        "uniform",
+        "tv",
+        "wavelet",
+        "nlmeans",
+        "bilateral",
+        "nn",
+    ],
     type=str,
 )
 parser.add_argument("--flip", nargs="+", help="Which of the plots to invert", type=int)
