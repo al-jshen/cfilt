@@ -267,8 +267,8 @@ for i, fname in enumerate(args.files):
 
 plt.suptitle(args.title)
 
-if args.save is not None:
-    plt.savefig(args.save, bbox_inches="tight", dpi=300)
+if args.save_path is not None:
+    plt.savefig(args.save_path, bbox_inches="tight", dpi=300)
 
 if not args.no_show:
     plt.show()
