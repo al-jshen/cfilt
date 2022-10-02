@@ -68,7 +68,7 @@ parser.add_argument(
     "--nn_layers", type=int, help="Number of resblocks in neural network"
 )
 parser.add_argument(
-    "--nn_channel", type=int, help="Number of hidden channels in neural network"
+    "--nn_hidden", type=int, help="Number of hidden channels in neural network"
 )
 parser.add_argument(
     "--nn_path", type=str, help="Path to load neural network state_dict from"
