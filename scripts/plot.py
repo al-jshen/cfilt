@@ -64,6 +64,8 @@ parser.add_argument(
 )
 parser.add_argument("--row", type=int, help="Take a slice along a row")
 parser.add_argument("--col", type=int, help="Take a slice along a column")
+parser.add_argument("--save_path", type=str, help="Path to save the image to")
+parser.add_argument("--no_show", action="store_true", help="Don't show the plot")
 parser.add_argument(
     "--nn_layers", type=int, help="Number of resblocks in neural network"
 )
@@ -264,4 +266,9 @@ for i, fname in enumerate(args.files):
     f.close()
 
 plt.suptitle(args.title)
-plt.show()
+
+if args.save is not None:
+    plt.savefig(args.save, bbox_inches="tight", dpi=300)
+
+if not args.no_show:
+    plt.show()
