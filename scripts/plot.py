@@ -14,6 +14,14 @@ from skimage.restoration import (
     denoise_bilateral,
 )
 import time
+import torch
+import torch.nn as nn
+import sys
+
+sys.path.append("/scratch/gpfs/js5013/programs/cfilt/")
+from cfilt.utils import *
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -47,6 +55,15 @@ parser.add_argument(
 )
 parser.add_argument("--row", type=int, help="Take a slice along a row")
 parser.add_argument("--col", type=int, help="Take a slice along a column")
+parser.add_argument(
+    "--nn_layers", type=int, help="Number of resblocks in neural network"
+)
+parser.add_argument(
+    "--nn_channel", type=int, help="Number of hidden channels in neural network"
+)
+parser.add_argument(
+    "--nn_path", type=str, help="Path to load neural network state_dict from"
+)
 parser.add_argument(
     "--gradients",
     choices=["sobel", "prewitt"],
@@ -114,36 +131,65 @@ else:
     passes = args.passes
 
 
+if "nn" in filters:
+    model = nn.Sequential(
+        ConvXCoder(
+            (125, 133),
+            1,
+            args.nn_hidden,
+            args.nn_hidden,
+            args.nn_layers,
+            device,
+        ),
+        ConvXCoder(
+            (125, 133),
+            args.nn_hidden,
+            1,
+            args.nn_hidden,
+            args.nn_layers,
+            device,
+        ),
+    )
+    model.load_state_dict(remove_data_parallel(torch.load(args.nn_path)))
+    model.eval()
+
+
 def filter(current, kind, passes):
-    for _ in range(passes):
-        if kind == "median":
-            current = medfilt2d(current, kernel_size=3)
-        elif kind == "gaussian":
-            current = gaussian_filter(current, sigma=1)
-        elif kind == "uniform":
-            filter = np.ones((3, 3)) / 9.0
-            current = convolve2d(current, filter, mode="same")
-        elif kind == "tv":
-            current = denoise_tv_chambolle(current)
-        elif kind == "wavelet":
-            current = denoise_wavelet(current)
-        elif kind == "nlmeans":
-            sigma_est = np.mean(estimate_sigma(current))
-            current = denoise_nl_means(
-                current,
-                h=0.8 * sigma_est,
-                sigma=sigma_est,
-                patch_size=5,
-                patch_distance=6,
-                fast_mode=False,
-            )
-        elif kind == "bilateral":
-            sigma_est = np.mean(estimate_sigma(current))
-            shift = current.min() - 1
-            current = denoise_bilateral(
-                current - shift, sigma_color=sigma_est, sigma_spatial=15
-            )
-            current += shift
+    if kind == "nn":
+        imsize = current.shape
+        current = current.reshape(1, 1, *imsize)
+        current = model(torch.from_numpy(current).to(device)).cpu().detach().numpy()
+        current = current.reshape(imsize)
+    else:
+        for _ in range(passes):
+            if kind == "median":
+                current = medfilt2d(current, kernel_size=3)
+            elif kind == "gaussian":
+                current = gaussian_filter(current, sigma=1)
+            elif kind == "uniform":
+                filter = np.ones((3, 3)) / 9.0
+                current = convolve2d(current, filter, mode="same")
+            elif kind == "tv":
+                current = denoise_tv_chambolle(current)
+            elif kind == "wavelet":
+                current = denoise_wavelet(current)
+            elif kind == "nlmeans":
+                sigma_est = np.mean(estimate_sigma(current))
+                current = denoise_nl_means(
+                    current,
+                    h=0.8 * sigma_est,
+                    sigma=sigma_est,
+                    patch_size=5,
+                    patch_distance=6,
+                    fast_mode=False,
+                )
+            elif kind == "bilateral":
+                sigma_est = np.mean(estimate_sigma(current))
+                shift = current.min() - 1
+                current = denoise_bilateral(
+                    current - shift, sigma_color=sigma_est, sigma_spatial=15
+                )
+                current += shift
     return current
 
 
