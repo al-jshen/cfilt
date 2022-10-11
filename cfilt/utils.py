@@ -258,3 +258,7 @@ def qplot(ims, fn=None):
     fig, ax = plt.subplots(1, n, figsize=(2 + 3 * n, 3.5))
     for i in range(n):
         ax[i].pcolormesh(ims[i])
+
+
+fft2d = lambda x: np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(x)))
+ifft2d = lambda x: np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(x))).real
