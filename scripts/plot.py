@@ -51,6 +51,7 @@ parser.add_argument(
         "nlmeans",
         "bilateral",
         "nn",
+        "fourier",
     ],
     type=str,
 )
