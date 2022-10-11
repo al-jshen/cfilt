@@ -81,6 +81,10 @@ parser.add_argument(
     help="Also show gradient operator filtered plots",
 )
 parser.add_argument(
+    "--fourier",
+    help="Also show 2d Fourier transform of the filtered plots",
+)
+parser.add_argument(
     "--no_flip",
     action="store_true",
     help="Don't invert any of the plots",
@@ -98,6 +102,8 @@ if args.row is not None:
 if args.col is not None:
     nrows += 1
 if args.gradients is not None:
+    nrows += 1
+if args.fourier is not None:
     nrows += 1
 
 fig, ax = plt.subplots(
@@ -254,6 +260,11 @@ for i, fname in enumerate(args.files):
     if args.gradients is not None:
         ax[ctr, i].imshow(grad(current), interpolation="none")
         ax[ctr, i].set_title(f"{args.gradients} filtered")
+        ctr += 1
+
+    if args.fourier is not None:
+        ax[ctr, i].imshow(np.log(np.abs(fft2d(current))), interpolation="none")
+        ax[ctr, i].set_title("Fourier transform")
         ctr += 1
 
     assert ctr == nrows
