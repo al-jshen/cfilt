@@ -208,6 +208,10 @@ def filter(current, kind, passes):
                     current - shift, sigma_color=sigma_est, sigma_spatial=15
                 )
                 current += shift
+            elif kind == "fourier":
+                imfft = fft2d(current)
+                imfft[np.abs(imfft) < np.quantile(np.abs(imfft), 0.9)] = 0
+                current = ifft2d(imfft)
     return current
 
 
