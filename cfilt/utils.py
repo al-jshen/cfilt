@@ -9,6 +9,7 @@ import hdf5plugin
 import numpy as np
 from collections import OrderedDict
 import copy
+import matplotlib.pyplot as plt
 
 
 class CDS(Dataset):
@@ -245,3 +246,15 @@ class Cascade(nn.Module):
             x = m(x)
             self.intermediates.append(x)
         return x
+
+
+crop = lambda x: x[3:-1, 3:-2]
+
+
+def qplot(ims, fn=None):
+    if fn is not None:
+        ims = list(map(fn, ims))
+    n = len(ims)
+    fig, ax = plt.subplots(1, n, figsize=(2 + 3 * n, 3.5))
+    for i in range(n):
+        ax[i].pcolormesh(ims[i])
