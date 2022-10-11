@@ -217,6 +217,7 @@ for i, fname in enumerate(args.files):
     current = f[args.var][:]
 
     if current.ndim == 3:
+        assert current.shape[0] == 1
         current = current[0, :, :]
 
     if i in to_flip:
@@ -224,7 +225,7 @@ for i, fname in enumerate(args.files):
 
     ctr = 0
     if args.show_original:
-        im = ax[ctr, i].imshow(current, cmap=args.cmap)
+        im = ax[ctr, i].imshow(crop(current), cmap=args.cmap)
         ax[ctr, i].set_title(args.labels[i])
         ctr += 1
 
@@ -243,7 +244,7 @@ for i, fname in enumerate(args.files):
     )
     fulltitle = args.labels[i] + " " + title
 
-    fim = ax[ctr, i].imshow(current, interpolation="none", cmap=args.cmap)
+    fim = ax[ctr, i].imshow(crop(current), interpolation="none", cmap=args.cmap)
     ax[ctr, i].set_title(fulltitle if ctr == 0 else title)
     fctr = ctr
     ctr += 1
@@ -259,12 +260,12 @@ for i, fname in enumerate(args.files):
         ctr += 1
 
     if args.gradients is not None:
-        ax[ctr, i].imshow(grad(current), interpolation="none")
+        ax[ctr, i].imshow(grad(crop(current)), interpolation="none")
         ax[ctr, i].set_title(f"{args.gradients} filtered")
         ctr += 1
 
     if args.fourier is not None:
-        ax[ctr, i].imshow(np.log(np.abs(fft2d(current))), interpolation="none")
+        ax[ctr, i].imshow(np.log(np.abs(fft2d(crop(current)))), interpolation="none")
         ax[ctr, i].set_title("Fourier transform")
         ctr += 1
 
