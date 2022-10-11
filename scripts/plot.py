@@ -242,6 +242,8 @@ for i, fname in enumerate(args.files):
             current = crop(current)
         else:
             current = filter(crop(current), filters[i], passes[i])
+    else:
+        current = crop(current)
 
     end = time.time()
 
