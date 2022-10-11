@@ -82,6 +82,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--fourier",
+    action="store_true",
     help="Also show 2d Fourier transform of the filtered plots",
 )
 parser.add_argument(
