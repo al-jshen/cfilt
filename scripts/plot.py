@@ -237,7 +237,11 @@ for i, fname in enumerate(args.files):
     start = time.time()
 
     if i in to_filter:
-        current = filter(current, filters[i], passes[i])
+        if filters[i] == "nn":
+            current = filter(current, filters[i], passes[i])
+            current = crop(current)
+        else:
+            current = filter(crop(current), filters[i], passes[i])
 
     end = time.time()
 
@@ -249,7 +253,7 @@ for i, fname in enumerate(args.files):
     )
     fulltitle = args.labels[i] + " " + title
 
-    fim = ax[ctr, i].imshow(crop(current), interpolation="none", cmap=args.cmap)
+    fim = ax[ctr, i].imshow(current, interpolation="none", cmap=args.cmap)
     ax[ctr, i].set_title(fulltitle if ctr == 0 else title)
     fctr = ctr
     ctr += 1
@@ -265,12 +269,12 @@ for i, fname in enumerate(args.files):
         ctr += 1
 
     if args.gradients is not None:
-        ax[ctr, i].imshow(grad(crop(current)), interpolation="none")
+        ax[ctr, i].imshow(grad(current), interpolation="none")
         ax[ctr, i].set_title(f"{args.gradients} filtered")
         ctr += 1
 
     if args.fourier is not None:
-        ax[ctr, i].imshow(np.log(np.abs(fft2d(crop(current)))), interpolation="none")
+        ax[ctr, i].imshow(np.log(np.abs(fft2d(current))), interpolation="none")
         ax[ctr, i].set_title("Fourier transform")
         ctr += 1
 
