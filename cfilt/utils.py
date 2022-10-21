@@ -11,9 +11,24 @@ from collections import OrderedDict
 import copy
 import matplotlib.pyplot as plt
 from scipy import ndimage
+from skimage import morphology
 
 
 crop_fn = lambda x: x[3:-1, 3:-2]
+
+
+def erode_image(image, **kwargs):
+    seed = np.copy(image)
+    seed[1:-1, 1:-1] = image.max()
+    filled = morphology.reconstruction(seed, image, method='erosion', **kwargs)
+    return filled
+
+
+def dilate_image(image, **kwargs):
+    seed = np.copy(image)
+    seed[1:-1, 1:-1] = image.min()
+    rec = morphology.reconstruction(seed, image, method='dilation', **kwargs)
+    return rec
 
 def discretize_image(image, bins, quantile=False):
     im_copy = np.copy(image)
