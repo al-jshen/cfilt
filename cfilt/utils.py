@@ -10,10 +10,23 @@ import numpy as np
 from collections import OrderedDict
 import copy
 import matplotlib.pyplot as plt
+from scipy import ndimage
 
+
+crop_fn = lambda x: x[3:-1, 3:-2]
+
+def discretize_image(image, bins, quantile=False):
+    im_copy = np.copy(image)
+    if quantile:
+        cbins = np.quantile(im_copy, np.linspace(0, 1, bins + 1))
+    else:
+        cbins = np.linspace(im_copy.min(), im_copy.max(), bins + 1)
+    for c in range(cbins.size - 1):
+        im_copy[np.where((im_copy >= cbins[c]) & (im_copy <= cbins[c + 1]))] = (cbins[c] + cbins[c + 1]) / 2.0
+    return im_copy
 
 class CDS(Dataset):
-    def __init__(self, ppcs, j, out_dir, normalize=True, transform=None):
+    def __init__(self, ppcs, j, out_dir, crop=True, normalize=True, transform=None):
 
         super().__init__()
         self.ppcs = ppcs
@@ -42,7 +55,10 @@ class CDS(Dataset):
             js = []
             for i in range(1, self.total_size + 1):
                 with h5py.File(f"{out_dir}/out-{ppc}.{str(i).zfill(3)}", "r") as f:
-                    js.append(f[j][:])
+                    if crop:
+                        js.append(crop_fn(f[j][:]))
+                    else:
+                        js.append(f[j][:])
             self.images[ppc] = np.stack(js)
             if normalize:
                 self.mean[ppc] = self.images[ppc].mean()
@@ -248,8 +264,6 @@ class Cascade(nn.Module):
         return x
 
 
-crop = lambda x: x[3:-1, 3:-2]
-
 
 def qplot(ims, fn=None):
     if fn is not None:
@@ -258,6 +272,7 @@ def qplot(ims, fn=None):
     fig, ax = plt.subplots(1, n, figsize=(2 + 3 * n, 3.5))
     for i in range(n):
         ax[i].pcolormesh(ims[i])
+    return fig, ax
 
 
 fft2d = lambda x: np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(x)))
