@@ -6,7 +6,7 @@ Current filtering for PIC simulations
 
 ### Plotting 
 
-There is a [scripts/plot.py](https://github.com/al-jshen/cfilt/blob/master/scripts/plot.py) tool for generating grids of plots that can be useful for comparing different filters. Run this with `python plot.py`. There is again a `--help` flag. Several filters are implemented (e.g., Gaussian, wavelet, non-linear means, Fourier), and you can visualize different combinations of the original image, the filtered image, the filtered image in Fourier space, gradients, and more. 
+There is a [scripts/plot.py](https://github.com/al-jshen/cfilt/blob/master/scripts/plot.py) tool for generating grids of plots that can be useful for comparing different filters. Run this with `python plot.py`. There is a `--help` flag. Several filters are implemented (e.g., Gaussian, wavelet, non-linear means, Fourier), and you can visualize different combinations of the original image, the filtered image, the filtered image in Fourier space, gradients, and more. 
 
 ### Notebooks
 
